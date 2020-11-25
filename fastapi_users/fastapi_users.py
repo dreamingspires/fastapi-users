@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Sequence, Type
+from typing import Any, Callable, Dict, Optional, Sequence, Type, Union
 
 from fastapi import APIRouter, Request
 
@@ -74,7 +74,11 @@ class FastAPIUsers:
 
     def get_register_router(
         self,
-        after_register: Optional[Callable[[models.UD, Request], None]] = None,
+        after_register: Optional[Union[Callable[[models.UD, Request], None], 
+            Callable[[models.UD, str, Request], None]]] = None,
+        after_verify: Optional[Callable[[models.UD, Request], None]] = None,
+        activate_user_token_secret: str = None,
+        activate_user_token_lifetime_seconds: int = 3600,
     ) -> APIRouter:
         """
         Return a router with a register route.
@@ -88,6 +92,9 @@ class FastAPIUsers:
             self._user_create_model,
             self._user_db_model,
             after_register,
+            after_verify,
+            activate_user_token_secret,
+            activate_user_token_lifetime_seconds
         )
 
     def get_reset_password_router(
