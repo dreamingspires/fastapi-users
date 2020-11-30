@@ -6,12 +6,14 @@ import asynctest
 import httpx
 import pytest
 from fastapi import FastAPI, Request, status
-
+from pydantic import UUID4
 from fastapi_users.router import ErrorCode, get_register_router
 from tests.conftest import User, UserCreate, UserDB
-
+from fastapi_users.utils import generate_jwt
 SECRET = "SECRET"
 LIFETIME = 3600
+ACTIVATE_USER_TOKEN_AUDIENCE = "fastapi-users:activate"
+JWT_ALGORITHM = "HS256"
 
 activation_token_secret = SECRET
 activation_token_lifetime_seconds = LIFETIME
@@ -40,6 +42,7 @@ def activation_callback_async():
 @pytest.fixture(params=[activation_callback_sync, activation_callback_async])
 def activation_callback(request):
     return request.param()
+
 
 
 @pytest.fixture
@@ -156,7 +159,7 @@ class TestRegister:
         json = {
             "email": "lancelot@camelot.bt",
             "password": "guinevere",
-            "is_active": False,
+            "is_active": True,
         }
         response = await test_app_client.post("/register", json=json)
         assert response.status_code == status.HTTP_201_CREATED
@@ -171,7 +174,11 @@ class TestRegister:
             "email": "lancelot@camelot.bt",
             "password": "guinevere",
         }
-        response_register = await test_app_client.post("/register", json=json)
+        response = await test_app_client.post("/register", json=json)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert after_register.called is False
+        assert activation_callback.called is True
+        
         token = activation_callback.call_args[0][1]
         data = jwt.decode(
             token,
@@ -179,4 +186,26 @@ class TestRegister:
             audience=ACTIVATE_USER_TOKEN_AUDIENCE,
             algorithms=[JWT_ALGORITHM],
         )
-        assert data ==False
+        user_id = data.get("user_id")
+        user_uuid = UUID4(user_id)
+        created_user = activation_callback.call_args[0][0]
+        assert user_uuid == created_user.id
+
+    async def test_valid_body_token_receival(
+        self,
+        test_app_client: httpx.AsyncClient,
+        inactive_user: UserDB,
+        after_register,
+        activation_callback
+    ):
+        created_user = inactive_user
+        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token = generate_jwt(
+            token_data,
+            activation_token_lifetime_seconds,
+            activation_token_secret,
+        )
+        response = await test_app_client.post(f"/activate/{token}/")
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert after_register.called is True
+        assert activation_callback.called is False
