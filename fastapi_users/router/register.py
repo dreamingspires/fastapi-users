@@ -1,6 +1,6 @@
 from typing import Callable, Optional, Type, cast, Union
 import jwt
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Body
 from pydantic import UUID4
 
 from fastapi_users import models
@@ -65,9 +65,8 @@ def get_register_router(
         return created_user
 
     if activation_callback:
-        @router.get("/activate/{token}/", status_code=status.HTTP_202_ACCEPTED)
-        @router.post("/activate/{token}/", status_code=status.HTTP_202_ACCEPTED)
-        async def activate(request: Request, token: str):
+        @router.post("/activate", response_model=user_model, status_code=status.HTTP_202_ACCEPTED)
+        async def activate(request: Request, token: str = Body(...)):
             try:
                 data = jwt.decode(
                     token,
@@ -118,4 +117,5 @@ def get_register_router(
             await user_db.update(user)
             if after_register:
                 await run_handler(after_register, user, request)
+            return user
     return router

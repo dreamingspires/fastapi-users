@@ -44,7 +44,6 @@ def activation_callback(request):
     return request.param()
 
 
-
 @pytest.fixture
 @pytest.mark.asyncio
 async def test_app_client(
@@ -168,7 +167,7 @@ class TestRegister:
         data = cast(Dict[str, Any], response.json())
         assert data["is_active"] is False
 
-    async def test_valid_body_token_submission(
+    async def test_valid_body_correct_token_produced(
         self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
         json = {
             "email": "lancelot@camelot.bt",
@@ -191,7 +190,113 @@ class TestRegister:
         created_user = activation_callback.call_args[0][0]
         assert user_uuid == created_user.id
 
-    async def test_valid_body_token_receival(
+
+@pytest.mark.router
+@pytest.mark.asyncio
+class TestActivate:
+    async def test_empty_body(self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
+        response = await test_app_client.post("/activate", json='')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
+        assert after_register.called is False
+        assert activation_callback.called is False
+
+    async def test_invalid_token(self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
+        token = "foo"
+        response = await test_app_client.post("/activate", json=token)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
+        assert after_register.called is False
+        assert activation_callback.called is False
+    
+    async def test_missing_user_id_token_receival(
+        self,
+        test_app_client: httpx.AsyncClient,
+        inactive_user: UserDB,
+        after_register,
+        activation_callback
+    ):
+        created_user = inactive_user
+        token_data = {"user_id": str(''), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token = generate_jwt(
+            token_data,
+            activation_token_lifetime_seconds,
+            activation_token_secret,
+        )
+        response = await test_app_client.post("/activate", json=token)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
+        assert after_register.called is False
+        assert activation_callback.called is False
+
+    async def test_invalid_user_id_token_receival(
+        self,
+        test_app_client: httpx.AsyncClient,
+        inactive_user: UserDB,
+        after_register,
+        activation_callback
+    ):
+        created_user = inactive_user
+        token_data = {"user_id": str('foo'), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token = generate_jwt(
+            token_data,
+            activation_token_lifetime_seconds,
+            activation_token_secret,
+        )
+        response = await test_app_client.post("/activate", json=token)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
+        assert after_register.called is False
+        assert activation_callback.called is False
+
+    async def test_valid_body_expired_token(
+        self,
+        test_app_client: httpx.AsyncClient,
+        inactive_user: UserDB,
+        after_register,
+        activation_callback
+    ):
+        activation_token_lifetime_seconds = -1
+        created_user = inactive_user
+        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token = generate_jwt(
+            token_data,
+            activation_token_lifetime_seconds,
+            activation_token_secret,
+        )
+        response = await test_app_client.post("/activate", json=token)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_TOKEN_EXPIRED
+        assert after_register.called is False
+        assert activation_callback.called is False
+
+    async def test_valid_body_user_is_active(
+        self,
+        test_app_client: httpx.AsyncClient,
+        active_user: UserDB,
+        after_register,
+        activation_callback
+    ):
+        created_user = active_user
+        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token = generate_jwt(
+            token_data,
+            activation_token_lifetime_seconds,
+            activation_token_secret,
+        )
+        response = await test_app_client.post("/activate", json=token)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = cast(Dict[str, Any], response.json())
+        assert data["detail"] == ErrorCode.ACTIVATE_USER_LINK_USED
+        assert after_register.called is False
+        assert activation_callback.called is False
+
+    async def test_valid_body_user_is_inactive(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
@@ -205,7 +310,9 @@ class TestRegister:
             activation_token_lifetime_seconds,
             activation_token_secret,
         )
-        response = await test_app_client.post(f"/activate/{token}/")
+        response = await test_app_client.post("/activate", json=token)
         assert response.status_code == status.HTTP_202_ACCEPTED
         assert after_register.called is True
         assert activation_callback.called is False
+        data = cast(Dict[str, Any], response.json())
+        assert data["is_active"] is True
