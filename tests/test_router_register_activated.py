@@ -233,7 +233,7 @@ class TestActivate:
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_missing_user_id_token_receival(
+    async def test_valid_token_missing_user_id(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
@@ -254,7 +254,7 @@ class TestActivate:
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_invalid_user_id_token_receival(
+    async def test_valid_token_invalid_uuid(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
@@ -275,7 +275,7 @@ class TestActivate:
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_valid_body_expired_token(
+    async def test_expired_token(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
@@ -300,7 +300,7 @@ class TestActivate:
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_valid_body_user_is_active(
+    async def test_active_user(
         self,
         test_app_client: httpx.AsyncClient,
         active_user: UserDB,
@@ -324,7 +324,7 @@ class TestActivate:
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_valid_body_user_is_inactive(
+    async def test_inactive_user(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
