@@ -1,6 +1,6 @@
 # Register routes
 
-The register router will generate a `/register` route to allow a user to create a new account, and optionally an `/activate/{token}/` route to allow activation of the user account. 
+The register router will generate a `/register` route to allow a user to create a new account, and optionally an `/activate/` route to allow activation of the user account. 
 
 Check the [routes usage](../../usage/routes.md) to learn how to use them.
 
@@ -10,17 +10,17 @@ Each user account has an associated `is_active` attribute.  This determines whet
 
 By default, any users created by calling the `/register` route are activated upon initialisation.
 
-If user verification is required, then the `activation_callback` must be supplied to `get_register_router`, the register router generator. When this callback is supplied, newly registered users are not activated by default, and a corresponding `/activate/{token}/` route is created.
+If user verification is required, then the `activation_callback` must be supplied to `get_register_router`, the register router generator. When this callback is supplied, newly registered users are not activated by default, and a corresponding `/activate` route is created.
 
 User activation then proceeds as follows:
 
 * The user registers using the `/register` route.
 
-* The `activation_callback` is called, with a unique activation token in [its arguments](#activation-callback).
+* The `activation_callback` is called, with a unique activation token in the request body.
 
-* The user is activated if this token is supplied as a parameter to the `/activate/{token}/` route before token expiry (after `activation_token_lifetime_seconds`).
+* The user is activated if this token is supplied as a parameter to the `/activate` route before token expiry (after `activation_token_lifetime_seconds`).
 
-Email verification can be implemented within `activation_callback`, emailing the user with the corresponding `/activate/{token}/` URL.  An example can be found [below](#activation-callback)
+Email verification can be implemented within `activation_callback`, emailing the user with the corresponding `/activate` URL.  An example can be found [below](#activation-callback)
 
 ## Setup
 
@@ -48,6 +48,7 @@ app.include_router(
     prefix="/auth",
     tags=["auth"],
 )
+
 ```
 `get_register_router`
 
@@ -101,9 +102,9 @@ You can optionally provide an `activation_callback` for [custom user activation]
 
 You must also supply `activation_token_secret` for this case - a cryptographic secret used to sign the token.
 
-`get_register_router` automatically initializes the `/activate/{token}/` route when `activation_token_secret` and `activation_callback` are supplied.
+`get_register_router` automatically initializes the `/activate` route when `activation_token_secret` and `activation_callback` are supplied.
 
-A token will be passed to your `activation_callback`. This token can be used to create a url to the `/activate/{token}` router, which will in turn activate a user.
+A token will be passed to your `activation_callback`. This token can be used to create a url to the `/activate` router, which will in turn activate a user.
 
 Typically, you'll want to **send an activation e-mail** which contains this URL.
 

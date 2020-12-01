@@ -90,11 +90,9 @@ If `activation_callback` supplied:
     ```
 ## Activate router
 
-### `POST /activate/{token}`
-### `GET /activate/{token}`
+### `POST /activate`
 
 Activate a new user. Will call the `after_register` [handler](../configuration/routers/register.md#activation-callback) on successful activation.
-
 
 !!! abstract "Payload"
     ```json
@@ -102,7 +100,6 @@ Activate a new user. Will call the `after_register` [handler](../configuration/r
         "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNmJhYTI4OWYtOGE0OC00ZGMwLThiM2UtMmViOTgwOGIxODQ2IiwiYXVkIjoiZmFzdGFwaS11c2VyczphY3RpdmF0ZSIsImV4cCI6MTYwNjMyOTA5OH0.-HWG4j5_ygtRahiiBcwLfMHOFq_ydcJegHyK65ppchs"
     }
     ```
-
 
 !!! success "`202 Accepted`" User has been activated
 

@@ -69,6 +69,7 @@ def user_oauth(oauth_account1, oauth_account2) -> UserDBOAuth:
         oauth_accounts=[oauth_account1, oauth_account2],
     )
 
+
 @pytest.fixture
 def active_user() -> UserDB:
     return UserDB(
@@ -76,6 +77,7 @@ def active_user() -> UserDB:
         hashed_password=angharad_password_hash,
         is_active=True,
     )
+
 
 @pytest.fixture
 def inactive_user() -> UserDB:

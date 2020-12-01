@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Type
 
 from fastapi import APIRouter, Request
 
@@ -93,7 +93,7 @@ class FastAPIUsers:
             after_register,
             activation_callback,
             activation_token_secret,
-            activation_token_lifetime_seconds
+            activation_token_lifetime_seconds,
         )
 
     def get_reset_password_router(

@@ -1,15 +1,17 @@
 from typing import Any, AsyncGenerator, Dict, cast
 from unittest.mock import MagicMock
 
-import jwt
 import asynctest
 import httpx
+import jwt
 import pytest
 from fastapi import FastAPI, Request, status
 from pydantic import UUID4
+
 from fastapi_users.router import ErrorCode, get_register_router
-from tests.conftest import User, UserCreate, UserDB
 from fastapi_users.utils import generate_jwt
+from tests.conftest import User, UserCreate, UserDB
+
 SECRET = "SECRET"
 LIFETIME = 3600
 ACTIVATE_USER_TOKEN_AUDIENCE = "fastapi-users:activate"
@@ -17,6 +19,7 @@ JWT_ALGORITHM = "HS256"
 
 activation_token_secret = SECRET
 activation_token_lifetime_seconds = LIFETIME
+
 
 def after_register_sync():
     return MagicMock(return_value=None)
@@ -47,7 +50,11 @@ def activation_callback(request):
 @pytest.fixture
 @pytest.mark.asyncio
 async def test_app_client(
-    mock_user_db, mock_authentication, after_register, activation_callback, get_test_client
+    mock_user_db,
+    mock_authentication,
+    after_register,
+    activation_callback,
+    get_test_client,
 ) -> AsyncGenerator[httpx.AsyncClient, None]:
     register_router = get_register_router(
         mock_user_db,
@@ -57,7 +64,7 @@ async def test_app_client(
         after_register,
         activation_callback,
         activation_token_secret,
-        activation_token_lifetime_seconds
+        activation_token_lifetime_seconds,
     )
 
     app = FastAPI()
@@ -70,7 +77,9 @@ async def test_app_client(
 @pytest.mark.router
 @pytest.mark.asyncio
 class TestRegister:
-    async def test_empty_body(self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
+    async def test_empty_body(
+        self, test_app_client: httpx.AsyncClient, after_register, activation_callback
+    ):
         response = await test_app_client.post("/register", json={})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert after_register.called is False
@@ -107,7 +116,11 @@ class TestRegister:
         "email", ["king.arthur@camelot.bt", "King.Arthur@camelot.bt"]
     )
     async def test_existing_user(
-        self, email, test_app_client: httpx.AsyncClient, after_register, activation_callback
+        self,
+        email,
+        test_app_client: httpx.AsyncClient,
+        after_register,
+        activation_callback,
     ):
         json = {"email": email, "password": "guinevere"}
         response = await test_app_client.post("/register", json=json)
@@ -119,7 +132,11 @@ class TestRegister:
 
     @pytest.mark.parametrize("email", ["lancelot@camelot.bt", "Lancelot@camelot.bt"])
     async def test_valid_body(
-        self, email, test_app_client: httpx.AsyncClient, after_register, activation_callback
+        self,
+        email,
+        test_app_client: httpx.AsyncClient,
+        after_register,
+        activation_callback,
     ):
         json = {"email": email, "password": "guinevere"}
         response = await test_app_client.post("/register", json=json)
@@ -168,7 +185,8 @@ class TestRegister:
         assert data["is_active"] is False
 
     async def test_valid_body_correct_token_produced(
-        self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
+        self, test_app_client: httpx.AsyncClient, after_register, activation_callback
+    ):
         json = {
             "email": "lancelot@camelot.bt",
             "password": "guinevere",
@@ -177,7 +195,7 @@ class TestRegister:
         assert response.status_code == status.HTTP_201_CREATED
         assert after_register.called is False
         assert activation_callback.called is True
-        
+
         token = activation_callback.call_args[0][1]
         data = jwt.decode(
             token,
@@ -194,15 +212,19 @@ class TestRegister:
 @pytest.mark.router
 @pytest.mark.asyncio
 class TestActivate:
-    async def test_empty_body(self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
-        response = await test_app_client.post("/activate", json='')
+    async def test_empty_body(
+        self, test_app_client: httpx.AsyncClient, after_register, activation_callback
+    ):
+        response = await test_app_client.post("/activate", json="")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = cast(Dict[str, Any], response.json())
         assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
         assert after_register.called is False
         assert activation_callback.called is False
 
-    async def test_invalid_token(self, test_app_client: httpx.AsyncClient, after_register, activation_callback):
+    async def test_invalid_token(
+        self, test_app_client: httpx.AsyncClient, after_register, activation_callback
+    ):
         token = "foo"
         response = await test_app_client.post("/activate", json=token)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -210,16 +232,16 @@ class TestActivate:
         assert data["detail"] == ErrorCode.ACTIVATE_USER_BAD_TOKEN
         assert after_register.called is False
         assert activation_callback.called is False
-    
+
     async def test_missing_user_id_token_receival(
         self,
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
         after_register,
-        activation_callback
+        activation_callback,
     ):
         created_user = inactive_user
-        token_data = {"user_id": str(''), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token_data = {"user_id": str(""), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
         token = generate_jwt(
             token_data,
             activation_token_lifetime_seconds,
@@ -237,10 +259,10 @@ class TestActivate:
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
         after_register,
-        activation_callback
+        activation_callback,
     ):
         created_user = inactive_user
-        token_data = {"user_id": str('foo'), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token_data = {"user_id": str("foo"), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
         token = generate_jwt(
             token_data,
             activation_token_lifetime_seconds,
@@ -258,11 +280,14 @@ class TestActivate:
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
         after_register,
-        activation_callback
+        activation_callback,
     ):
         activation_token_lifetime_seconds = -1
         created_user = inactive_user
-        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token_data = {
+            "user_id": str(created_user.id),
+            "aud": ACTIVATE_USER_TOKEN_AUDIENCE,
+        }
         token = generate_jwt(
             token_data,
             activation_token_lifetime_seconds,
@@ -280,10 +305,13 @@ class TestActivate:
         test_app_client: httpx.AsyncClient,
         active_user: UserDB,
         after_register,
-        activation_callback
+        activation_callback,
     ):
         created_user = active_user
-        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token_data = {
+            "user_id": str(created_user.id),
+            "aud": ACTIVATE_USER_TOKEN_AUDIENCE,
+        }
         token = generate_jwt(
             token_data,
             activation_token_lifetime_seconds,
@@ -301,10 +329,13 @@ class TestActivate:
         test_app_client: httpx.AsyncClient,
         inactive_user: UserDB,
         after_register,
-        activation_callback
+        activation_callback,
     ):
         created_user = inactive_user
-        token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+        token_data = {
+            "user_id": str(created_user.id),
+            "aud": ACTIVATE_USER_TOKEN_AUDIENCE,
+        }
         token = generate_jwt(
             token_data,
             activation_token_lifetime_seconds,

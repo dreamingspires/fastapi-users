@@ -1,6 +1,7 @@
-from typing import Callable, Optional, Type, cast, Union
+from typing import Callable, Optional, Type, Union, cast
+
 import jwt
-from fastapi import APIRouter, HTTPException, Request, status, Body
+from fastapi import APIRouter, Body, HTTPException, Request, status
 from pydantic import UUID4
 
 from fastapi_users import models
@@ -8,7 +9,9 @@ from fastapi_users.db import BaseUserDatabase
 from fastapi_users.password import get_password_hash
 from fastapi_users.router.common import ErrorCode, run_handler
 from fastapi_users.utils import JWT_ALGORITHM, generate_jwt
+
 ACTIVATE_USER_TOKEN_AUDIENCE = "fastapi-users:activate"
+
 
 def get_register_router(
     user_db: BaseUserDatabase[models.BaseUserDB],
@@ -23,11 +26,12 @@ def get_register_router(
     """Generate a router with the register route."""
 
     if activation_token_secret and not activation_callback:
-        raise ValueError('Must supply activation_callback with activation_token_secret')
+        raise ValueError("Must supply activation_callback with activation_token_secret")
     elif activation_callback and not activation_token_secret:
-        raise ValueError('Must supply activation_token_secret with activation_callback')
-    
+        raise ValueError("Must supply activation_token_secret with activation_callback")
+
     router = APIRouter()
+
     @router.post(
         "/register", response_model=user_model, status_code=status.HTTP_201_CREATED
     )
@@ -44,15 +48,19 @@ def get_register_router(
         hashed_password = get_password_hash(user.password)
         if existing_user is None:
             db_user = user_db_model(
-                **user.create_update_dict(), hashed_password=hashed_password,
-                is_active = not activation_callback
+                **user.create_update_dict(),
+                hashed_password=hashed_password,
+                is_active=not activation_callback
             )
             created_user = await user_db.create(db_user)
         else:
             created_user = existing_user
 
         if activation_callback:
-            token_data = {"user_id": str(created_user.id), "aud": ACTIVATE_USER_TOKEN_AUDIENCE}
+            token_data = {
+                "user_id": str(created_user.id),
+                "aud": ACTIVATE_USER_TOKEN_AUDIENCE,
+            }
             token = generate_jwt(
                 token_data,
                 activation_token_lifetime_seconds,
@@ -61,11 +69,14 @@ def get_register_router(
             await run_handler(activation_callback, created_user, token, request)
         elif after_register:
             await run_handler(after_register, created_user, request)
-        
+
         return created_user
 
     if activation_callback:
-        @router.post("/activate", response_model=user_model, status_code=status.HTTP_202_ACCEPTED)
+
+        @router.post(
+            "/activate", response_model=user_model, status_code=status.HTTP_202_ACCEPTED
+        )
         async def activate(request: Request, token: str = Body(...)):
             try:
                 data = jwt.decode(
@@ -118,4 +129,5 @@ def get_register_router(
             if after_register:
                 await run_handler(after_register, user, request)
             return user
+
     return router
