@@ -8,10 +8,11 @@ from fastapi_users.db import BaseUserDatabase
 from fastapi_users.router import (
     get_auth_router,
     get_register_router,
+    get_verify_router,
     get_reset_password_router,
     get_users_router,
 )
-from fastapi_users.user import CreateUserProtocol, get_create_user
+from fastapi_users.user import CreateUserProtocol, ActivateUserProtocol, SeekUserProtocol, get_create_user, get_activate_user, get_seek_user
 
 try:
     from httpx_oauth.oauth2 import BaseOAuth2
@@ -41,6 +42,8 @@ class FastAPIUsers:
     db: BaseUserDatabase
     authenticator: Authenticator
     create_user: CreateUserProtocol
+    activate_user: ActivateUserProtocol
+    seek_user: SeekUserProtocol
     _user_model: Type[models.BaseUser]
     _user_create_model: Type[models.BaseUserCreate]
     _user_update_model: Type[models.BaseUserUpdate]
@@ -65,6 +68,8 @@ class FastAPIUsers:
         self._user_db_model = user_db_model
 
         self.create_user = get_create_user(db, user_db_model)
+        self.activate_user = get_activate_user(db)
+        self.seek_user = get_seek_user(db)
 
         self.get_current_user = self.authenticator.get_current_user
         self.get_current_active_user = self.authenticator.get_current_active_user
@@ -80,9 +85,6 @@ class FastAPIUsers:
     def get_register_router(
         self,
         after_register: Optional[Callable[[models.UD, Request], None]] = None,
-        activation_callback: Optional[Callable[[models.UD, str, Request], None]] = None,
-        activation_token_secret: str = None,
-        activation_token_lifetime_seconds: int = 3600,
     ) -> APIRouter:
         """
         Return a router with a register route.
@@ -95,9 +97,28 @@ class FastAPIUsers:
             self._user_model,
             self._user_create_model,
             after_register,
+        )
+    def get_verify_router(
+        self,
+        activation_callback: Callable[[models.UD, str, Request], None],
+        activation_token_secret: str,
+        activation_token_lifetime_seconds: int = 3600,
+        after_activation: Optional[Callable[[models.UD, Request], None]] = None,
+    ) -> APIRouter:
+        """
+        Return a router with a register route.
+
+        :param after_register: Optional function called
+        after a successful registration.
+        """
+        return get_verify_router(
+            self.activate_user,
+            self.seek_user,
+            self._user_model,
             activation_callback,
             activation_token_secret,
             activation_token_lifetime_seconds,
+            after_activation
         )
 
     def get_reset_password_router(

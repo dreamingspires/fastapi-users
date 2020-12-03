@@ -22,7 +22,8 @@ class BaseUser(CreateUpdateDictModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
-
+    is_verified: Optional[bool] = False
+    
     @validator("id", pre=True, always=True)
     def default_id(cls, v):
         return v or uuid.uuid4()
@@ -33,6 +34,7 @@ class BaseUserCreate(CreateUpdateDictModel):
     password: str
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
+    is_verified: Optional[bool] = False
 
 
 class BaseUserUpdate(BaseUser):
