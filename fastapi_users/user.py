@@ -19,7 +19,7 @@ class UserNotExists(Exception):
     pass
 
 
-class UserAlreadyActivated(Exception):
+class UserAlreadyVerified(Exception):
     pass
 
 
@@ -56,27 +56,27 @@ def get_create_user(
     return create_user
 
 
-class ActivateUserProtocol(Protocol):
+class VerifyUserProtocol(Protocol):
     def __call__(self, user_uuid: str) -> Awaitable[models.BaseUserDB]:
         pass
 
 
-def get_activate_user(
+def get_verify_user(
     user_db: BaseUserDatabase[models.BaseUserDB],
-) -> ActivateUserProtocol:
-    async def activate_user(user_uuid: str) -> models.BaseUserDB:
+) -> VerifyUserProtocol:
+    async def verify_user(user_uuid: str) -> models.BaseUserDB:
         user = await user_db.get(user_uuid)
 
         if user is None:
             raise UserNotExists()
 
         if user.is_verified:
-            raise UserAlreadyActivated()
+            raise UserAlreadyVerified()
 
         user.is_verified = True
         return await user_db.update(user)
 
-    return activate_user
+    return verify_user
 
 
 class SeekUserProtocol(Protocol):
