@@ -355,7 +355,7 @@ def get_param_test_client():
                 async with httpx.AsyncClient(
                     app=app, base_url="http://app.io"
                 ) as test_client:
-                    return test_client
+                    yield test_client
         yield test_client_fact
 
     return _get_param_test_client

@@ -15,7 +15,10 @@ def get_auth_router(
 ) -> APIRouter:
     """Generate a router with login/logout routes for an authentication backend."""
     router = APIRouter()
-
+    if requires_verification:
+        get_current_user = authenticator.get_current_verified_user
+    else:
+        get_current_user = authenticator.get_current_active_user
     @router.post("/login")
     async def login(
         response: Response, credentials: OAuth2PasswordRequestForm = Depends()
@@ -38,7 +41,7 @@ def get_auth_router(
         
         @router.post("/logout")
         async def logout(
-            response: Response, user=Depends(authenticator.get_current_active_user)
+            response: Response, user=Depends(get_current_user)
         ):
             return await backend.get_logout_response(user, response)
 
