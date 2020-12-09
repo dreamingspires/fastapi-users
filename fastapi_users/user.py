@@ -87,6 +87,9 @@ def get_seek_user(
     user_db: BaseUserDatabase[models.BaseUserDB],
 ) -> SeekUserProtocol:
     async def seek_user(user_email: EmailStr) -> models.BaseUserDB:
+        if not (user_email == EmailStr(user_email)):
+            raise UserNotExists()
+        
         user = await user_db.get_by_email(user_email)
 
         if user is None:

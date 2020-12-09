@@ -30,9 +30,19 @@ def get_verify_router(
         "/request_verify_token", status_code=status.HTTP_202_ACCEPTED
     )
     async def token_gen(request: Request, email: EmailStr = Body(..., embed=True)):
-        user = await seek_user(email)
-
-        if user is not None and user.is_active:
+        try:
+            user = await seek_user(email)
+        except UserNotExists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorCode.VERIFY_USER_NOT_EXISTS,
+            )
+        if user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorCode.VERIFY_USER_ALREADY_VERIFIED,
+            )
+        elif user.is_active:
             token_data = {
                 "user_id": str(user.id),
                 "email": email,
@@ -43,8 +53,11 @@ def get_verify_router(
                 verification_token_lifetime_seconds,
                 verification_token_secret,
             )
+
             await run_handler(after_verification_request, user, token, request)
-            return {"token": token}
+        
+        return None
+
 
     @router.post(
         "/verify", response_model=user_model, status_code=status.HTTP_202_ACCEPTED
@@ -75,7 +88,13 @@ def get_verify_router(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ErrorCode.VERIFY_USER_BAD_TOKEN,
             )
-        user_check = await seek_user(email)
+        try:
+            user_check = await seek_user(email)
+        except UserNotExists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorCode.VERIFY_USER_BAD_TOKEN,
+            )
         if not (str(user_check.id)==user_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

@@ -20,6 +20,7 @@ guinevere_password_hash = get_password_hash("guinevere")
 angharad_password_hash = get_password_hash("angharad")
 viviane_password_hash = get_password_hash("viviane")
 lancelot_password_hash = get_password_hash("lancelot")
+excalibur_password_hash = get_password_hash("excalibur")
 
 
 class User(models.BaseUser):
@@ -70,14 +71,6 @@ def user_oauth(oauth_account1, oauth_account2) -> UserDBOAuth:
     )
 
 
-@pytest.fixture
-def active_user() -> UserDB:
-    return UserDB(
-        email="percival@camelot.bt",
-        hashed_password=angharad_password_hash,
-        is_active=True,
-    )
-
 
 @pytest.fixture
 def inactive_user() -> UserDB:
@@ -97,6 +90,24 @@ def inactive_user_oauth(oauth_account3) -> UserDBOAuth:
         oauth_accounts=[oauth_account3],
     )
 
+
+@pytest.fixture
+def verified_user() -> UserDB:
+    return UserDB(
+        email="lake.lady@camelot.bt",
+        hashed_password=excalibur_password_hash,
+        is_active=True,
+        is_verified=True
+    )
+
+@pytest.fixture
+def verified_user_oauth(oauth_account4) -> UserDBOAuth:
+    return UserDBOAuth(
+        email="lake.lady@camelot.bt",
+        hashed_password=excalibur_password_hash,
+        is_active=False,
+        oauth_accounts=[oauth_account4],
+    )
 
 @pytest.fixture
 def superuser() -> UserDB:
@@ -149,15 +160,24 @@ def oauth_account3() -> BaseOAuthAccount:
         account_email="percival@camelot.bt",
     )
 
+@pytest.fixture
+def oauth_account4() -> BaseOAuthAccount:
+    return BaseOAuthAccount(
+        oauth_name="service4",
+        access_token="TOKEN",
+        expires_at=1579000751,
+        account_id="verfied_user_oauth1",
+        account_email="lake.lady@camelot.bt",
+    )
 
 @pytest.fixture
-def mock_user_db(user, active_user, inactive_user, superuser) -> BaseUserDatabase:
+def mock_user_db(user, verified_user, inactive_user, superuser) -> BaseUserDatabase:
     class MockUserDatabase(BaseUserDatabase[UserDB]):
         async def get(self, id: UUID4) -> Optional[UserDB]:
             if id == user.id:
                 return user
-            if id == active_user.id:
-                return active_user
+            if id == verified_user.id:
+                return verified_user
             if id == inactive_user.id:
                 return inactive_user
             if id == superuser.id:
@@ -168,6 +188,8 @@ def mock_user_db(user, active_user, inactive_user, superuser) -> BaseUserDatabas
             lower_email = email.lower()
             if lower_email == user.email.lower():
                 return user
+            if lower_email == verified_user.email.lower():
+                return verified_user
             if lower_email == inactive_user.email.lower():
                 return inactive_user
             if lower_email == superuser.email.lower():
