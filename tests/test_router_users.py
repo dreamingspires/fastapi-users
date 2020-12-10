@@ -252,6 +252,35 @@ class TestUpdateMe:
             request = after_update.call_args[0][2]
             assert isinstance(request, Request)
     
+    async def test_valid_body_is_verified(
+        self,
+        test_app_client_factory: httpx.AsyncClient,
+        requires_verification,
+        user: UserDB,
+        after_update
+    ):
+        test_app_client = await test_app_client_factory(requires_verification).__anext__()
+        json = {"is_verified": True}
+        response = await test_app_client.patch(
+            "/me", json=json, headers={"Authorization": f"Bearer {user.id}"}
+        )
+        if requires_verification:
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            assert after_update.called is False
+        else:
+            assert response.status_code == status.HTTP_200_OK
+
+            data = cast(Dict[str, Any], response.json())
+            assert data["is_verified"] is False
+
+            assert after_update.called is True
+            actual_user = after_update.call_args[0][0]
+            assert actual_user.id == user.id
+            updated_fields = after_update.call_args[0][1]
+            assert updated_fields == {}
+            request = after_update.call_args[0][2]
+            assert isinstance(request, Request)
+
     async def test_valid_body_password(
         self,
         mocker,
@@ -377,6 +406,31 @@ class TestUpdateMe:
 
         data = cast(Dict[str, Any], response.json())
         assert data["is_active"] is True
+
+        assert after_update.called is True
+        actual_user = after_update.call_args[0][0]
+        assert actual_user.id == verified_user.id
+        updated_fields = after_update.call_args[0][1]
+        assert updated_fields == {}
+        request = after_update.call_args[0][2]
+        assert isinstance(request, Request)
+
+    async def test_valid_body_is_verified_verified_user(
+        self,
+        test_app_client_factory: httpx.AsyncClient,
+        requires_verification,
+        verified_user: UserDB,
+        after_update
+    ):
+        test_app_client = await test_app_client_factory(requires_verification).__anext__()
+        json = {"is_verified": False}
+        response = await test_app_client.patch(
+            "/me", json=json, headers={"Authorization": f"Bearer {verified_user.id}"}
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        data = cast(Dict[str, Any], response.json())
+        assert data["is_verified"] is True
 
         assert after_update.called is True
         actual_user = after_update.call_args[0][0]
@@ -687,6 +741,39 @@ class TestUpdateUser:
 
         data = cast(Dict[str, Any], response.json())
         assert data["is_active"] is False
+
+    async def test_valid_body_is_verified_unverified_superuser(
+        self, test_app_client_factory: httpx.AsyncClient, requires_verification, user: UserDB, superuser: UserDB
+    ):
+        test_app_client = await test_app_client_factory(requires_verification).__anext__()
+        json = {"is_verified": True}
+        response = await test_app_client.patch(
+            f"/{user.id}",
+            json=json,
+            headers={"Authorization": f"Bearer {superuser.id}"},
+        )
+        if requires_verification:
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        else:
+            assert response.status_code == status.HTTP_200_OK
+
+            data = cast(Dict[str, Any], response.json())
+            assert data["is_verified"] is True
+
+    async def test_valid_body_is_verified_verified_superuser(
+        self, test_app_client_factory: httpx.AsyncClient, requires_verification, user: UserDB, verified_superuser: UserDB
+    ):
+        test_app_client = await test_app_client_factory(requires_verification).__anext__()
+        json = {"is_verified": True}
+        response = await test_app_client.patch(
+            f"/{user.id}",
+            json=json,
+            headers={"Authorization": f"Bearer {verified_superuser.id}"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        data = cast(Dict[str, Any], response.json())
+        assert data["is_verified"] is True
 
     async def test_valid_body_password_unverified_superuser(
         self,
