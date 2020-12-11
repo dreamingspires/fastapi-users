@@ -25,7 +25,7 @@ class UserAlreadyVerified(Exception):
 
 class CreateUserProtocol(Protocol):  # pragma: no cover
     def __call__(
-        self, user: models.BaseUserCreate, safe: bool = False, is_active: bool = None
+        self, user: models.BaseUserCreate, safe: bool = False, is_active: bool = None, is_verified: bool = None
     ) -> Awaitable[models.BaseUserDB]:
         pass
 
