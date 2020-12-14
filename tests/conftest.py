@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncGenerator, List, Optional, Callable, Any
+from typing import Any, AsyncGenerator, Callable, List, Optional
 
 import httpx
 import pytest
@@ -71,7 +71,6 @@ def user_oauth(oauth_account1, oauth_account2) -> UserDBOAuth:
     )
 
 
-
 @pytest.fixture
 def inactive_user() -> UserDB:
     return UserDB(
@@ -97,8 +96,9 @@ def verified_user() -> UserDB:
         email="lake.lady@camelot.bt",
         hashed_password=excalibur_password_hash,
         is_active=True,
-        is_verified=True
+        is_verified=True,
     )
+
 
 @pytest.fixture
 def verified_user_oauth(oauth_account4) -> UserDBOAuth:
@@ -108,6 +108,7 @@ def verified_user_oauth(oauth_account4) -> UserDBOAuth:
         is_active=False,
         oauth_accounts=[oauth_account4],
     )
+
 
 @pytest.fixture
 def superuser() -> UserDB:
@@ -127,13 +128,14 @@ def superuser_oauth() -> UserDBOAuth:
         oauth_accounts=[],
     )
 
+
 @pytest.fixture
 def verified_superuser() -> UserDB:
     return UserDB(
         email="the.real.merlin@camelot.bt",
         hashed_password=viviane_password_hash,
         is_superuser=True,
-        is_verified=True
+        is_verified=True,
     )
 
 
@@ -180,6 +182,7 @@ def oauth_account3() -> BaseOAuthAccount:
         account_email="percival@camelot.bt",
     )
 
+
 @pytest.fixture
 def oauth_account4() -> BaseOAuthAccount:
     return BaseOAuthAccount(
@@ -189,6 +192,7 @@ def oauth_account4() -> BaseOAuthAccount:
         account_id="verified_user_oauth1",
         account_email="lake.lady@camelot.bt",
     )
+
 
 @pytest.fixture
 def oauth_account5() -> BaseOAuthAccount:
@@ -200,8 +204,11 @@ def oauth_account5() -> BaseOAuthAccount:
         account_email="the.real.merlin@camelot.bt",
     )
 
+
 @pytest.fixture
-def mock_user_db(user, verified_user, inactive_user, superuser, verified_superuser) -> BaseUserDatabase:
+def mock_user_db(
+    user, verified_user, inactive_user, superuser, verified_superuser
+) -> BaseUserDatabase:
     class MockUserDatabase(BaseUserDatabase[UserDB]):
         async def get(self, id: UUID4) -> Optional[UserDB]:
             if id == user.id:
@@ -248,7 +255,7 @@ def mock_user_db_oauth(
     verified_user_oauth,
     inactive_user_oauth,
     superuser_oauth,
-    verified_superuser_oauth
+    verified_superuser_oauth,
 ) -> BaseUserDatabase:
     class MockUserDatabase(BaseUserDatabase[UserDBOAuth]):
         async def get(self, id: UUID4) -> Optional[UserDBOAuth]:
@@ -345,9 +352,12 @@ def get_test_client():
 
     return _get_test_client
 
+
 @pytest.fixture
 def get_param_test_client():
-    async def _get_param_test_client(app_fact: Callable[[Any], ASGIApp]) -> AsyncGenerator[Callable[[Any], httpx.AsyncClient], None]:
+    async def _get_param_test_client(
+        app_fact: Callable[[Any], ASGIApp]
+    ) -> AsyncGenerator[Callable[[Any], httpx.AsyncClient], None]:
         async def test_client_fact(*args, **kwargs):
             app = await app_fact(*args, **kwargs)
 
@@ -356,9 +366,11 @@ def get_param_test_client():
                     app=app, base_url="http://app.io"
                 ) as test_client:
                     yield test_client
+
         yield test_client_fact
 
     return _get_param_test_client
+
 
 @pytest.fixture
 @pytest.mark.asyncio

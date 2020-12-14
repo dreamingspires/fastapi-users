@@ -5,19 +5,21 @@ from fastapi import APIRouter, Body, HTTPException, Request, status
 from pydantic import UUID4, EmailStr
 
 from fastapi_users import models
-from fastapi_users.utils import JWT_ALGORITHM, generate_jwt
 from fastapi_users.router.common import ErrorCode, run_handler
 from fastapi_users.user import (
-    VerifyUserProtocol,
-    SeekUserProtocol,
+    GetUserProtocol,
     UserAlreadyVerified,
     UserNotExists,
+    VerifyUserProtocol,
 )
+from fastapi_users.utils import JWT_ALGORITHM, generate_jwt
+
 VERIFY_USER_TOKEN_AUDIENCE = "fastapi-users:verify"
+
 
 def get_verify_router(
     verify_user: VerifyUserProtocol,
-    seek_user: SeekUserProtocol,
+    get_user: GetUserProtocol,
     user_model: Type[models.BaseUser],
     after_verification_request: Callable[[models.UD, str, Request], None],
     verification_token_secret: str,
@@ -26,12 +28,12 @@ def get_verify_router(
 ):
     router = APIRouter()
 
-    @router.post(
-        "/request_verify_token", status_code=status.HTTP_202_ACCEPTED
-    )
-    async def token_gen(request: Request, email: EmailStr = Body(..., embed=True)):
+    @router.post("/request_verify_token", status_code=status.HTTP_202_ACCEPTED)
+    async def request_verify_token(
+        request: Request, email: EmailStr = Body(..., embed=True)
+    ):
         try:
-            user = await seek_user(email)
+            user = await get_user(email)
         except UserNotExists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -55,9 +57,8 @@ def get_verify_router(
             )
 
             await run_handler(after_verification_request, user, token, request)
-        
-        return None
 
+        return None
 
     @router.post(
         "/verify", response_model=user_model, status_code=status.HTTP_202_ACCEPTED
@@ -89,13 +90,13 @@ def get_verify_router(
                 detail=ErrorCode.VERIFY_USER_BAD_TOKEN,
             )
         try:
-            user_check = await seek_user(email)
+            user_check = await get_user(email)
         except UserNotExists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ErrorCode.VERIFY_USER_BAD_TOKEN,
             )
-        if not (str(user_check.id)==user_id):
+        if not (str(user_check.id) == user_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ErrorCode.VERIFY_USER_BAD_TOKEN,
@@ -123,5 +124,5 @@ def get_verify_router(
         if after_verification:
             await run_handler(after_verification, user, request)
         return user
-    
+
     return router

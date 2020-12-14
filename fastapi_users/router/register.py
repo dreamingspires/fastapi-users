@@ -7,7 +7,6 @@ from fastapi_users.router.common import ErrorCode, run_handler
 from fastapi_users.user import CreateUserProtocol, UserAlreadyExists
 
 
-
 def get_register_router(
     create_user: CreateUserProtocol,
     user_model: Type[models.BaseUser],
@@ -31,7 +30,7 @@ def get_register_router(
 
         if after_register:
             await run_handler(after_register, created_user, request)
-        
+
         return created_user
 
     return router

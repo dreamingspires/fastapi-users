@@ -8,11 +8,18 @@ from fastapi_users.db import BaseUserDatabase
 from fastapi_users.router import (
     get_auth_router,
     get_register_router,
-    get_verify_router,
     get_reset_password_router,
     get_users_router,
+    get_verify_router,
 )
-from fastapi_users.user import CreateUserProtocol, VerifyUserProtocol, SeekUserProtocol, get_create_user, get_verify_user, get_seek_user
+from fastapi_users.user import (
+    CreateUserProtocol,
+    GetUserProtocol,
+    VerifyUserProtocol,
+    get_create_user,
+    get_get_user,
+    get_verify_user,
+)
 
 try:
     from httpx_oauth.oauth2 import BaseOAuth2
@@ -45,7 +52,7 @@ class FastAPIUsers:
     authenticator: Authenticator
     create_user: CreateUserProtocol
     verify_user: VerifyUserProtocol
-    seek_user: SeekUserProtocol
+    get_user: GetUserProtocol
     _user_model: Type[models.BaseUser]
     _user_create_model: Type[models.BaseUserCreate]
     _user_update_model: Type[models.BaseUserUpdate]
@@ -71,7 +78,7 @@ class FastAPIUsers:
 
         self.create_user = get_create_user(db, user_db_model)
         self.verify_user = get_verify_user(db)
-        self.seek_user = get_seek_user(db)
+        self.get_user = get_get_user(db)
 
         self.get_current_user = self.authenticator.get_current_user
         self.get_current_active_user = self.authenticator.get_current_active_user
@@ -110,6 +117,7 @@ class FastAPIUsers:
             self._user_create_model,
             after_register,
         )
+
     def get_verify_router(
         self,
         after_verification_request: Callable[[models.UD, str, Request], None],
@@ -125,12 +133,12 @@ class FastAPIUsers:
         """
         return get_verify_router(
             self.verify_user,
-            self.seek_user,
+            self.get_user,
             self._user_model,
             after_verification_request,
             verification_token_secret,
             verification_token_lifetime_seconds,
-            after_verification
+            after_verification,
         )
 
     def get_reset_password_router(
@@ -157,9 +165,7 @@ class FastAPIUsers:
         )
 
     def get_auth_router(
-        self,
-        backend: BaseAuthentication,
-        requires_verification: bool = False
+        self, backend: BaseAuthentication, requires_verification: bool = False
     ) -> APIRouter:
         """
         Return an auth router for a given authentication backend.
@@ -205,7 +211,7 @@ class FastAPIUsers:
         after_update: Optional[
             Callable[[models.UD, Dict[str, Any], Request], None]
         ] = None,
-        requires_verification: bool = False
+        requires_verification: bool = False,
     ) -> APIRouter:
         """
         Return a router with routes to manage users.
@@ -220,5 +226,5 @@ class FastAPIUsers:
             self._user_db_model,
             self.authenticator,
             after_update,
-            requires_verification
+            requires_verification,
         )

@@ -6,6 +6,7 @@ except ImportError:
     from typing_extensions import Protocol  # type: ignore
 
 from pydantic import EmailStr
+
 from fastapi_users import models
 from fastapi_users.db import BaseUserDatabase
 from fastapi_users.password import get_password_hash
@@ -25,7 +26,11 @@ class UserAlreadyVerified(Exception):
 
 class CreateUserProtocol(Protocol):  # pragma: no cover
     def __call__(
-        self, user: models.BaseUserCreate, safe: bool = False, is_active: bool = None, is_verified: bool = None
+        self,
+        user: models.BaseUserCreate,
+        safe: bool = False,
+        is_active: bool = None,
+        is_verified: bool = None,
     ) -> Awaitable[models.BaseUserDB]:
         pass
 
@@ -35,7 +40,10 @@ def get_create_user(
     user_db_model: Type[models.BaseUserDB],
 ) -> CreateUserProtocol:
     async def create_user(
-        user: models.BaseUserCreate, safe: bool = False, is_active: bool = None, is_verified: bool = None
+        user: models.BaseUserCreate,
+        safe: bool = False,
+        is_active: bool = None,
+        is_verified: bool = None,
     ) -> models.BaseUserDB:
         existing_user = await user_db.get_by_email(user.email)
 
@@ -79,21 +87,23 @@ def get_verify_user(
     return verify_user
 
 
-class SeekUserProtocol(Protocol):
+class GetUserProtocol(Protocol):
     def __call__(self, user_uuid: str) -> Awaitable[models.BaseUserDB]:
         pass
 
-def get_seek_user(
+
+def get_get_user(
     user_db: BaseUserDatabase[models.BaseUserDB],
-) -> SeekUserProtocol:
-    async def seek_user(user_email: EmailStr) -> models.BaseUserDB:
+) -> GetUserProtocol:
+    async def get_user(user_email: EmailStr) -> models.BaseUserDB:
         if not (user_email == EmailStr(user_email)):
             raise UserNotExists()
-        
+
         user = await user_db.get_by_email(user_email)
 
         if user is None:
             raise UserNotExists()
-        
+
         return user
-    return seek_user
+
+    return get_user

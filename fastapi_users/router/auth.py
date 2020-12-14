@@ -19,6 +19,7 @@ def get_auth_router(
         get_current_user = authenticator.get_current_verified_user
     else:
         get_current_user = authenticator.get_current_active_user
+
     @router.post("/login")
     async def login(
         response: Response, credentials: OAuth2PasswordRequestForm = Depends()
@@ -38,11 +39,9 @@ def get_auth_router(
         return await backend.get_login_response(user, response)
 
     if backend.logout:
-        
+
         @router.post("/logout")
-        async def logout(
-            response: Response, user=Depends(get_current_user)
-        ):
+        async def logout(response: Response, user=Depends(get_current_user)):
             return await backend.get_logout_response(user, response)
 
     return router
